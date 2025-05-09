@@ -4,12 +4,12 @@ API маршрути за RTSP capture модул
 
 import os
 import time
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response, JSONResponse, FileResponse
+from fastapi import APIRouter, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse, Response, JSONResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import get_capture_config, update_capture_config
-from .capture import capture_frame, get_placeholder_image
+from .capture import capture_frame, get_placeholder_image, start_capture_thread, stop_capture_thread
 from utils.logger import setup_logger
 
 # Инициализиране на логър
@@ -69,4 +69,97 @@ async def rtsp_info():
         "last_frame_path": config.last_frame_path,
         "rtsp_url": config.rtsp_url,
         "interval": config.interval,
-        "latest_url": "/rtsp/
+        "latest_url": "/rtsp/latest.jpg"
+    })
+
+@router.get("/capture")
+async def api_capture():
+    """Принудително извличане на нов кадър"""
+    success = capture_frame()
+    
+    if success:
+        return JSONResponse({
+            "status": "ok",
+            "message": "Кадърът е успешно извлечен",
+            "last_frame_time": get_capture_config().last_frame_time.isoformat() 
+                if get_capture_config().last_frame_time else None,
+            "latest_url": "/rtsp/latest.jpg"
+        })
+    else:
+        return JSONResponse({
+            "status": "error",
+            "message": "Не може да се извлече кадър от RTSP потока"
+        }, status_code=500)
+
+@router.post("/config")
+async def update_config(
+    rtsp_url: str = Form(None),
+    interval: int = Form(None),
+    width: int = Form(None),
+    height: int = Form(None),
+    quality: int = Form(None)
+):
+    """Обновява конфигурацията на RTSP модула"""
+    update_params = {}
+    
+    if rtsp_url is not None:
+        update_params["rtsp_url"] = rtsp_url
+    
+    if interval is not None:
+        update_params["interval"] = interval
+    
+    if width is not None:
+        update_params["width"] = width
+    
+    if height is not None:
+        update_params["height"] = height
+    
+    if quality is not None:
+        update_params["quality"] = quality
+    
+    # Обновяваме конфигурацията
+    updated_config = update_capture_config(**update_params)
+    
+    return JSONResponse({
+        "status": "ok",
+        "message": "Конфигурацията е обновена успешно",
+        "config": {
+            "rtsp_url": updated_config.rtsp_url,
+            "interval": updated_config.interval,
+            "width": updated_config.width,
+            "height": updated_config.height,
+            "quality": updated_config.quality
+        }
+    })
+
+@router.get("/start")
+async def start_capture():
+    """Стартира процеса за извличане на кадри"""
+    success = start_capture_thread()
+    
+    if success:
+        return JSONResponse({
+            "status": "ok",
+            "message": "Capture thread started successfully"
+        })
+    else:
+        return JSONResponse({
+            "status": "warning",
+            "message": "Capture thread is already running"
+        })
+
+@router.get("/stop")
+async def stop_capture():
+    """Спира процеса за извличане на кадри"""
+    success = stop_capture_thread()
+    
+    if success:
+        return JSONResponse({
+            "status": "ok",
+            "message": "Capture thread stopping"
+        })
+    else:
+        return JSONResponse({
+            "status": "error",
+            "message": "Failed to stop capture thread"
+        }, status_code=500)
