@@ -7,8 +7,7 @@ sdk: docker
 pinned: false
 ---
 
-obzor_weather_system/
-│
+
 ├── Dockerfile             # Главен Dockerfile за проекта
 ├── requirements.txt       # Общи зависимости
 ├── app.py                 # Основно приложение (FastAPI)
