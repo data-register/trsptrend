@@ -37,7 +37,7 @@ async def analysis_index(request: Request):
         "last_update": config.last_analysis_time.strftime("%H:%M:%S") if config.last_analysis_time else "Няма",
         "status": config.status,
         "status_text": "OK" if config.status == "ok" else "Грешка" if config.status == "error" else "Инициализация",
-        "has_api_key": bool(os.getenv("ANTHROPIC_API_KEY"))
+        "has_api_key": bool(os.getenv("ANTHROPIC_API_KEY")),
         "image_display_url": "/latest.jpg"
     })
 
