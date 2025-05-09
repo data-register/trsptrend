@@ -38,6 +38,7 @@ async def analysis_index(request: Request):
         "status": config.status,
         "status_text": "OK" if config.status == "ok" else "Грешка" if config.status == "error" else "Инициализация",
         "has_api_key": bool(os.getenv("ANTHROPIC_API_KEY"))
+        "image_display_url": "/latest.jpg"
     })
 
 @router.get("/latest")
