@@ -1,250 +1,177 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>RTSP Capture Module - ObzorWeather</title>
-    <meta http-equiv="refresh" content="60">
+    <title>{{ title }} - ObzorWeather</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
-            max-width: 800px; 
+            max-width: 1000px; 
             margin: 0 auto; 
             padding: 20px;
             background-color: #f5f5f5;
         }
         h1 { color: #0066cc; text-align: center; }
-        .container { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .modules-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .module-card {
             background-color: white;
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 300px;
+            transition: transform 0.3s;
         }
-        .frame { 
-            margin: 20px 0; 
-            border: 1px solid #ccc; 
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            width: 100%;
+        .module-card:hover {
+            transform: translateY(-5px);
         }
-        .info { 
-            background-color: #e7f2ff; 
-            padding: 15px; 
-            border-radius: 5px; 
-            margin-top: 20px;
-            width: 100%;
-        }
-        .img-container {
+        .module-icon {
+            font-size: 48px;
             text-align: center;
-        }
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 5px;
-        }
-        .status {
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-        .status-ok { background-color: #d4edda; color: #155724; }
-        .status-error { background-color: #f8d7da; color: #721c24; }
-        .status-warning { background-color: #fff3cd; color: #856404; }
-        
-        /* Стил за формуляра */
-        .config-form {
-            margin-top: 20px;
-            width: 100%;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        .form-group {
             margin-bottom: 10px;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
+        .module-title {
+            font-size: 18px;
             font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
         }
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+        .module-description {
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 15px;
         }
-        button {
-            background-color: #0066cc;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0055aa;
-        }
-        .controls {
-            margin-top: 20px;
+        .module-status {
             display: flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
         }
-        .btn-secondary {
-            background-color: #6c757d;
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
-        .btn-secondary:hover {
-            background-color: #5a6268;
+        .status-active {
+            background-color: #28a745;
         }
-        .btn-danger {
+        .status-inactive {
             background-color: #dc3545;
         }
-        .btn-danger:hover {
-            background-color: #c82333;
+        .status-warning {
+            background-color: #ffc107;
+        }
+        .module-button {
+            display: block;
+            text-align: center;
+            background-color: #0066cc;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .module-button:hover {
+            background-color: #0055aa;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <h1>RTSP Capture Module - ObzorWeather</h1>
-    <div class="container">
-        <div class="frame">
-            <h2>Последен кадър от камерата:</h2>
-            <div class="img-container">
-                <img src="/rtsp/latest.jpg?ts={{ timestamp }}" alt="Последен кадър от камерата">
+    <div class="header">
+        <h1>ObzorWeather System</h1>
+        <p>Модулна система за метеорологичен мониторинг</p>
+    </div>
+    
+    <div class="modules-container">
+        <!-- RTSP Capture Module -->
+        <div class="module-card">
+            <div class="module-icon">📹</div>
+            <div class="module-title">RTSP Capture</div>
+            <div class="module-description">
+                Модул за извличане на кадри от RTSP видео поток
             </div>
+            <div class="module-status">
+                <div class="status-indicator status-{{ 'active' if rtsp_config.status == 'ok' else 'warning' if rtsp_config.status == 'initializing' else 'inactive' }}"></div>
+                <span>{{ 'Активен' if rtsp_config.status == 'ok' else 'Инициализиране' if rtsp_config.status == 'initializing' else 'Неактивен' }}</span>
+            </div>
+            <a href="/rtsp" class="module-button">Управление</a>
         </div>
         
-        <div class="info">
-            <p><strong>Статус:</strong> 
-                <span class="status {% if status == 'ok' %}status-ok{% elif status == 'error' %}status-error{% else %}status-warning{% endif %}">
-                    {{ status_text }}
-                </span>
-            </p>
-            <p><strong>RTSP URL:</strong> {{ config.rtsp_url }}</p>
-            <p><strong>Интервал на обновяване:</strong> {{ config.interval }} секунди</p>
-            <p><strong>Размер на изображението:</strong> {{ config.width }}x{{ config.height }}</p>
-            <p><strong>Последно извличане:</strong> {{ last_update }}</p>
-            
-            <div class="controls">
-                <button onclick="captureFrame()" class="btn-primary">Извлечи кадър сега</button>
-                <button onclick="stopCapture()" class="btn-danger">Спри автоматичното извличане</button>
-                <button onclick="startCapture()" class="btn-secondary">Стартирай автоматичното извличане</button>
+        <!-- Image Analysis Module (Placeholder) -->
+        <div class="module-card">
+            <div class="module-icon">🔍</div>
+            <div class="module-title">Image Analysis</div>
+            <div class="module-description">
+                AI анализ на изображения от камерата (в разработка)
             </div>
+            <div class="module-status">
+                <div class="status-indicator status-inactive"></div>
+                <span>Не е активен</span>
+            </div>
+            <a href="#" class="module-button" style="background-color: #6c757d;">Очаквайте скоро</a>
         </div>
         
-        <div class="config-form">
-            <h2>Настройки на модула</h2>
-            <form id="configForm" onsubmit="return updateConfig(event)">
-                <div class="form-group">
-                    <label for="rtsp_url">RTSP URL:</label>
-                    <input type="text" id="rtsp_url" name="rtsp_url" value="{{ config.rtsp_url }}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="interval">Интервал (секунди):</label>
-                    <input type="number" id="interval" name="interval" value="{{ config.interval }}" min="1" max="3600">
-                </div>
-                
-                <div class="form-group">
-                    <label for="width">Ширина:</label>
-                    <input type="number" id="width" name="width" value="{{ config.width }}" min="100" max="1920">
-                </div>
-                
-                <div class="form-group">
-                    <label for="height">Височина:</label>
-                    <input type="number" id="height" name="height" value="{{ config.height }}" min="100" max="1080">
-                </div>
-                
-                <div class="form-group">
-                    <label for="quality">Качество (1-100):</label>
-                    <input type="number" id="quality" name="quality" value="{{ config.quality }}" min="1" max="100">
-                </div>
-                
-                <button type="submit">Запази настройките</button>
-            </form>
+        <!-- Weather Data Module (Placeholder) -->
+        <div class="module-card">
+            <div class="module-icon">🌤️</div>
+            <div class="module-title">Weather Data</div>
+            <div class="module-description">
+                Извличане на метеорологични данни от API (в разработка)
+            </div>
+            <div class="module-status">
+                <div class="status-indicator status-inactive"></div>
+                <span>Не е активен</span>
+            </div>
+            <a href="#" class="module-button" style="background-color: #6c757d;">Очаквайте скоро</a>
         </div>
     </div>
-
-    <script>
-        // Функция за извличане на кадър
-        function captureFrame() {
-            fetch('/rtsp/capture')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        // Обновяваме изображението
-                        const img = document.querySelector('.img-container img');
-                        img.src = `/rtsp/latest.jpg?ts=${Date.now()}`;
-                        alert('Кадърът е извлечен успешно!');
-                    } else {
-                        alert('Грешка: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Грешка при извличането на кадър');
-                });
-        }
+    
+    <div class="modules-container" style="margin-top: 20px;">
+        <!-- System Dashboard -->
+        <div class="module-card">
+            <div class="module-icon">📊</div>
+            <div class="module-title">System Dashboard</div>
+            <div class="module-description">
+                Информационно табло с общ поглед върху системата
+            </div>
+            <div class="module-status">
+                <div class="status-indicator status-warning"></div>
+                <span>В разработка</span>
+            </div>
+            <a href="#" class="module-button" style="background-color: #6c757d;">Очаквайте скоро</a>
+        </div>
         
-        // Функция за спиране на автоматичното извличане
-        function stopCapture() {
-            if (confirm('Сигурни ли сте, че искате да спрете автоматичното извличане на кадри?')) {
-                fetch('/rtsp/stop')
-                    .then(response => response.json())
-                    .then(data => {
-                        alert(data.message);
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Грешка при спиране на автоматичното извличане');
-                    });
-            }
-        }
-        
-        // Функция за стартиране на автоматичното извличане
-        function startCapture() {
-            fetch('/rtsp/start')
-                .then(response => response.json())
-                .then(data => {
-                    alert(data.message);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Грешка при стартиране на автоматичното извличане');
-                });
-        }
-        
-        // Функция за обновяване на конфигурацията
-        function updateConfig(event) {
-            event.preventDefault();
-            
-            const formData = new FormData(document.getElementById('configForm'));
-            
-            fetch('/rtsp/config', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    alert('Настройките са запазени успешно!');
-                    // Презареждаме страницата, за да видим промените
-                    window.location.reload();
-                } else {
-                    alert('Грешка: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Грешка при запазване на настройките');
-            });
-            
-            return false;
-        }
-    </script>
+        <!-- Current Frame -->
+        <div class="module-card">
+            <div class="module-icon">🖼️</div>
+            <div class="module-title">Current Frame</div>
+            <div class="module-description">
+                Бърз достъп до текущия кадър от камерата
+            </div>
+            <div class="module-status">
+                <div class="status-indicator status-{{ 'active' if rtsp_config.status == 'ok' else 'inactive' }}"></div>
+                <span>{{ 'Наличен' if rtsp_config.status == 'ok' else 'Недостъпен' }}</span>
+            </div>
+            <a href="/latest.jpg" class="module-button">Преглед</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>ObzorWeather System &copy; 2025 | Хелиополис</p>
+    </div>
 </body>
 </html>
