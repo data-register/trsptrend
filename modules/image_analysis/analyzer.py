@@ -41,28 +41,64 @@ def get_anthropic_api_key() -> Optional[str]:
     return api_key
 
 async def download_image(url: str) -> Optional[bytes]:
-    """Изтегля изображение от URL"""
+    """Чете изображение от локален файл или URL"""
     try:
-        logger.info(f"Опит за изтегляне на изображение от {url}")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=30.0)
+        # Проверяваме дали URL е локален път
+        if not url.startswith(('http://', 'https://')):
+            # Това е локален път, опитваме да го прочетем директно
+            # Проверяваме няколко възможни пътища
+            paths_to_try = [
+                url,  # Оригиналния път
+                os.path.join("/app", url),  # В case на Docker среда
+                os.path.join(os.getcwd(), url)  # Относително от текущата директория
+            ]
             
-            if response.status_code != 200:
-                logger.error(f"Грешка при изтегляне на изображението: HTTP {response.status_code}")
-                return None
+            for path in paths_to_try:
+                if os.path.exists(path):
+                    logger.info(f"Четене на изображение от локален файл: {path}")
+                    try:
+                        with open(path, "rb") as f:
+                            image_data = f.read()
+                        logger.info(f"Успешно прочетено изображение от {path}, размер: {len(image_data)} bytes")
+                        
+                        # Проверяваме дали изображението е валидно
+                        try:
+                            Image.open(BytesIO(image_data))
+                            return image_data
+                        except Exception as e:
+                            logger.error(f"Невалидно изображение от {path}: {e}")
+                            continue  # Опитваме със следващия път
+                    except Exception as e:
+                        logger.error(f"Грешка при четене на локален файл {path}: {e}")
+                        continue  # Опитваме със следващия път
             
-            image_data = response.content
-            logger.info(f"Успешно изтеглено изображение, размер: {len(image_data)} bytes")
+            # Ако стигнем дотук, не сме намерили валиден файл
+            logger.error(f"Не може да се намери или прочете локален файл: {url}")
+            logger.error(f"Опитани пътища: {paths_to_try}")
+            return None
             
-            # Проверяваме дали изображението е валидно
-            try:
-                Image.open(BytesIO(image_data))
-                return image_data
-            except Exception as e:
-                logger.error(f"Невалидно изображение: {e}")
-                return None
+        else:
+            # Това е URL, използваме HTTP заявка
+            logger.info(f"Опит за изтегляне на изображение от URL: {url}")
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=30.0, follow_redirects=True)
+                
+                if response.status_code != 200:
+                    logger.error(f"Грешка при изтегляне на изображението: HTTP {response.status_code}")
+                    return None
+                
+                image_data = response.content
+                logger.info(f"Успешно изтеглено изображение от URL, размер: {len(image_data)} bytes")
+                
+                # Проверяваме дали изображението е валидно
+                try:
+                    Image.open(BytesIO(image_data))
+                    return image_data
+                except Exception as e:
+                    logger.error(f"Невалидно изображение от URL: {e}")
+                    return None
     except Exception as e:
-        logger.error(f"Грешка при изтегляне на изображението: {e}")
+        logger.error(f"Грешка при изтегляне/четене на изображението: {e}")
         return None
 
 def encode_image_base64(image_data: bytes) -> str:
@@ -218,12 +254,12 @@ async def perform_image_analysis() -> AnalysisResult:
     )
     
     try:
-        # Изтегляме изображението
+        # Изтегляме/четем изображението
         image_data = await download_image(config.image_url)
         
         if not image_data:
-            logger.error(f"Не може да се изтегли изображение от {config.image_url}")
-            result.weather_conditions = "Не може да се изтегли изображение"
+            logger.error(f"Не може да се прочете/изтегли изображение от {config.image_url}")
+            result.weather_conditions = "Не може да се прочете/изтегли изображение"
             update_analysis_config(status="error")
             return result
         
@@ -314,6 +350,29 @@ def initialize():
         logger.error("ANTHROPIC_API_KEY не е наличен - Image Analysis модулът не може да бъде инициализиран")
         update_analysis_config(status="error")
         return False
+    
+    # Логваме къде се очаква да бъде изображението
+    config = get_analysis_config()
+    logger.info(f"Модулът ще анализира изображения от: {config.image_url}")
+    
+    # Проверяваме дали файла съществува в момента
+    if not config.image_url.startswith(('http://', 'https://')):
+        paths_to_try = [
+            config.image_url,
+            os.path.join("/app", config.image_url),
+            os.path.join(os.getcwd(), config.image_url)
+        ]
+        
+        file_exists = False
+        for path in paths_to_try:
+            if os.path.exists(path):
+                logger.info(f"Изображението съществува на път: {path}")
+                file_exists = True
+                break
+                
+        if not file_exists:
+            logger.warning(f"Изображението не съществува в нито един от опитаните пътища: {paths_to_try}")
+            logger.warning("Модулът ще работи, но първоначалният анализ може да се провали")
     
     # Стартираме thread за анализ
     start_analysis_thread()
