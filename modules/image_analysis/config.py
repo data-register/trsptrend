@@ -20,7 +20,7 @@ class AnalysisResult(BaseModel):
 
 class ImageAnalysisConfig(BaseModel):
     """Конфигурационен модел за Image Analysis"""
-    image_url: str = "https://warp360-rtsptrend.hf.space/latest.jpg"
+    image_url: str = "/app/frames/latest.jpg"  # Използваме локален път
     anthropic_api_url: str = "https://api.anthropic.com/v1/messages"
     anthropic_model: str = "claude-3-haiku-20240307"  # По-малък модел за по-бързи отговори
     max_tokens: int = 1000
@@ -35,7 +35,7 @@ class ImageAnalysisConfig(BaseModel):
 
 # Глобална конфигурация на модула
 _config = ImageAnalysisConfig(
-    image_url=os.getenv("IMAGE_URL", "https://warp360-rtsptrend.hf.space/latest.jpg"),
+    image_url=os.getenv("IMAGE_URL", "/app/frames/latest.jpg"),  # Локален път по подразбиране
     anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307"), 
     analysis_interval=int(os.getenv("ANALYSIS_INTERVAL", "300"))
 )
