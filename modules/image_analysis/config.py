@@ -20,7 +20,7 @@ class AnalysisResult(BaseModel):
 
 class ImageAnalysisConfig(BaseModel):
     """Конфигурационен модел за Image Analysis"""
-    image_url: str = "/app/frames/latest.jpg"  # Използваме локален път
+    image_url: str = "frames/latest.jpg"  # Локален път по подразбиране
     anthropic_api_url: str = "https://api.anthropic.com/v1/messages"
     anthropic_model: str = "claude-3-haiku-20240307"  # По-малък модел за по-бързи отговори
     max_tokens: int = 1000
@@ -33,9 +33,20 @@ class ImageAnalysisConfig(BaseModel):
     running: bool = True
     max_history_items: int = 20  # Максимален брой запазени анализи
 
+# Определяме правилния път до файловете на базата на средата
+def get_image_path():
+    # Проверка дали сме в Docker среда (Hugging Face)
+    if os.path.exists("/app"):
+        base_path = "/app/frames/latest.jpg"
+    else:
+        base_path = "frames/latest.jpg"
+    
+    # Ако е зададен като environment променлива, използваме нея
+    return os.getenv("IMAGE_URL", base_path)
+
 # Глобална конфигурация на модула
 _config = ImageAnalysisConfig(
-    image_url=os.getenv("IMAGE_URL", "/app/frames/latest.jpg"),  # Локален път по подразбиране
+    image_url=get_image_path(),
     anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307"), 
     analysis_interval=int(os.getenv("ANALYSIS_INTERVAL", "300"))
 )
